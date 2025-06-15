@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "369273167395",
+    "project_id": "kkc-reservation",
+    "storage_bucket": "kkc-reservation.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:369273167395:android:7acbf84c2c5f555c511b96",
+        "android_client_info": {
+          "package_name": "com.kkc.kkc_reservation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_B-u-67fU4o8n_Bx8S5rDa4NmWEQ-ayE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
