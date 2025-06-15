@@ -1,31 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:kkc/page/home.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kkc/onboarding/onboarding_view.dart';
+import 'services/firestore_service.dart';
+import 'package:logger/logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final onboarding = prefs.getBool("onboarding")??false;
+  
+  // ✅ Initialiser Firebase
+  await Firebase.initializeApp();
 
-  runApp( MyApp(onboarding: onboarding));
+  final logger = Logger();
+  
+  // ✅ Tester la connexion (optionnel)
+  final isConnected = await FirestoreService.testConnection();
+  if (isConnected) {
+    logger.i('✅ Firestore connecté');
+  } else {
+    logger.e('❌ Erreur Firestore');
+  }
+  
+  // ✅ Initialiser les données par défaut (décommentez lors du premier lancement)
+  // await FirestoreService.initializeDefaultData();
+  
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool onboarding;
-  const MyApp({super.key, this.onboarding = false});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Reservation KKC',
+      title: 'KKC Transport',
       theme: ThemeData(
-
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF32733)),
-        useMaterial3: true,
+        primarySwatch: Colors.red,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: onboarding? const Home() : const OnboardingView(),
+      home: const Home(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
