@@ -8,6 +8,8 @@ class Trip {
   final DateTime departureTime; // ✅ Selon votre DB
   final double price;           // ✅ Selon votre DB
   final int availableSeats;     // ✅ Selon votre DB
+  final Duration duration;
+  final DateTime arrivalTime;
 
   Trip({
     required this.id,
@@ -17,6 +19,8 @@ class Trip {
     required this.departureTime,
     required this.price,
     required this.availableSeats,
+    required this.duration,
+    required this.arrivalTime,
   });
 
   factory Trip.fromFirestore(Map<String, dynamic> data, String id) {
@@ -28,6 +32,8 @@ class Trip {
       departureTime: (data['departureTime'] as Timestamp).toDate(), // ✅ Nom exact de votre DB
       price: (data['price'] ?? 0).toDouble(),        // ✅ Nom exact de votre DB
       availableSeats: data['availableSeats'] ?? 0,   // ✅ Nom exact de votre DB
+      duration: Duration(minutes: data['durationInMinutes'] ?? 0),
+      arrivalTime: (data['arrivalTime'] as Timestamp).toDate(),
     );
   }
 
@@ -39,6 +45,8 @@ class Trip {
       'departureTime': Timestamp.fromDate(departureTime), // ✅ Nom exact de votre DB
       'price': price,                                // ✅ Nom exact de votre DB
       'availableSeats': availableSeats,              // ✅ Nom exact de votre DB
+      'durationInMinutes': duration.inMinutes,
+      'arrivalTime' : Timestamp.fromDate(arrivalTime),
     };
   }
 }

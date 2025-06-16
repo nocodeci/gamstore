@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
-import 'register_page.dart';
-import 'home.dart'; // ✅ Ajout de l'import
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
+class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _obscureConfirmPassword = true;
+  bool _acceptTerms = false;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -48,8 +50,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _fadeController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -76,85 +81,37 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  Future<void> _signIn() async {
+  Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-    HapticFeedback.lightImpact();
-
-    try {
-      await AuthService.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      
-      if (mounted) {
-        _showSnackBar('Connexion réussie !', isError: false);
-        
-        // ✅ Navigation vers la page d'accueil
-        await Future.delayed(const Duration(milliseconds: 500)); // Petit délai pour voir le message
-        
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const Home()),
-            (route) => false, // Supprime toutes les routes précédentes
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar(e.toString());
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    HapticFeedback.lightImpact();
-
-    try {
-      await AuthService.signInWithGoogle();
-      if (mounted) {
-        _showSnackBar('Connexion Google réussie !', isError: false);
-        
-        // ✅ Navigation vers la page d'accueil
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const Home()),
-            (route) => false,
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar(e.toString());
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    if (_emailController.text.trim().isEmpty) {
-      _showSnackBar('Veuillez entrer votre adresse email');
+    if (!_acceptTerms) {
+      _showSnackBar('Veuillez accepter les conditions d\'utilisation');
       return;
     }
 
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
+
     try {
-      await AuthService.resetPassword(_emailController.text.trim());
-      _showSnackBar('Email de réinitialisation envoyé !', isError: false);
+      await AuthService.signUpWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _fullNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+      );
+
+      if (mounted) {
+        _showSnackBar('Compte créé avec succès !', isError: false);
+        Navigator.pop(context); // Retour à la page de connexion
+      }
     } catch (e) {
-      _showSnackBar(e.toString());
+      if (mounted) {
+        _showSnackBar(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -162,6 +119,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF2d3748)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -171,14 +136,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
                   _buildHeader(),
-                  const SizedBox(height: 40),
-                  _buildLoginForm(),
-                  const SizedBox(height: 24),
-                  _buildSocialLogin(),
                   const SizedBox(height: 32),
-                  _buildSignUpLink(),
+                  _buildRegisterForm(),
+                  const SizedBox(height: 24),
+                  _buildLoginLink(),
                 ],
               ),
             ),
@@ -192,48 +154,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFf32733).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.directions_bus_rounded,
-                color: Color(0xFFf32733),
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'KKC',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF2d3748),
-                    letterSpacing: 1,
-                  ),
-                ),
-                Text(
-                  'Transport',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF718096),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
         const Text(
-          'Bon retour !',
+          'Créer un compte',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
@@ -242,7 +164,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 8),
         Text(
-          'Connectez-vous à votre compte pour continuer',
+          'Rejoignez KKC Transport pour réserver vos voyages',
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey.shade600,
@@ -253,11 +175,45 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildRegisterForm() {
     return Form(
       key: _formKey,
       child: Column(
         children: [
+          // Nom complet
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200, width: 1),
+            ),
+            child: TextFormField(
+              controller: _fullNameController,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Nom complet',
+                prefixIcon: Icon(
+                  Icons.person_outline,
+                  color: Colors.grey.shade600,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(20),
+                labelStyle: TextStyle(color: Colors.grey.shade600),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Veuillez entrer votre nom complet';
+                }
+                if (value.length < 2) {
+                  return 'Le nom doit contenir au moins 2 caractères';
+                }
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Email
           Container(
             decoration: BoxDecoration(
@@ -292,6 +248,40 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 16),
 
+          // Téléphone
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200, width: 1),
+            ),
+            child: TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Numéro de téléphone',
+                prefixIcon: Icon(
+                  Icons.phone_outlined,
+                  color: Colors.grey.shade600,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(20),
+                labelStyle: TextStyle(color: Colors.grey.shade600),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Veuillez entrer votre numéro de téléphone';
+                }
+                if (value.length < 8) {
+                  return 'Numéro de téléphone invalide';
+                }
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Mot de passe
           Container(
             decoration: BoxDecoration(
@@ -302,8 +292,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             child: TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _signIn(),
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: 'Mot de passe',
                 prefixIcon: Icon(
@@ -327,7 +316,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Veuillez entrer votre mot de passe';
+                  return 'Veuillez entrer un mot de passe';
                 }
                 if (value.length < 6) {
                   return 'Le mot de passe doit contenir au moins 6 caractères';
@@ -338,37 +327,89 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 16),
 
-          // Options
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Checkbox(
-                    value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                      });
-                    },
-                    activeColor: const Color(0xFFf32733),
+          // Confirmer mot de passe
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200, width: 1),
+            ),
+            child: TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirmPassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _signUp(),
+              decoration: InputDecoration(
+                labelText: 'Confirmer le mot de passe',
+                prefixIcon: Icon(
+                  Icons.lock_outline,
+                  color: Colors.grey.shade600,
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey.shade600,
                   ),
-                  Text(
-                    'Se souvenir de moi',
+                  onPressed: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(20),
+                labelStyle: TextStyle(color: Colors.grey.shade600),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Veuillez confirmer votre mot de passe';
+                }
+                if (value != _passwordController.text) {
+                  return 'Les mots de passe ne correspondent pas';
+                }
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Conditions d'utilisation
+          Row(
+            children: [
+              Checkbox(
+                value: _acceptTerms,
+                onChanged: (value) {
+                  setState(() {
+                    _acceptTerms = value ?? false;
+                  });
+                },
+                activeColor: const Color(0xFFf32733),
+              ),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
                     ),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: _resetPassword,
-                child: const Text(
-                  'Mot de passe oublié ?',
-                  style: TextStyle(
-                    color: Color(0xFFf32733),
-                    fontWeight: FontWeight.w500,
+                    children: const [
+                      TextSpan(text: 'J\'accepte les '),
+                      TextSpan(
+                        text: 'conditions d\'utilisation',
+                        style: TextStyle(
+                          color: Color(0xFFf32733),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(text: ' et la '),
+                      TextSpan(
+                        text: 'politique de confidentialité',
+                        style: TextStyle(
+                          color: Color(0xFFf32733),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -376,12 +417,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
 
-          // Bouton de connexion
+          // Bouton d'inscription
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _signIn,
+              onPressed: _isLoading ? null : _signUp,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFf32733),
                 shape: RoundedRectangleBorder(
@@ -399,7 +440,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       ),
                     )
                   : const Text(
-                      'Se connecter',
+                      'Créer mon compte',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -413,80 +454,22 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSocialLogin() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey.shade300)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Ou continuer avec',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            Expanded(child: Divider(color: Colors.grey.shade300)),
-          ],
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: OutlinedButton.icon(
-            onPressed: _isLoading ? null : _signInWithGoogle,
-            icon: Image.asset(
-              'assets/images/google_logo.png', // Ajoutez le logo Google
-              height: 24,
-              width: 24,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.g_mobiledata, size: 24);
-              },
-            ),
-            label: const Text(
-              'Continuer avec Google',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF2d3748),
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSignUpLink() {
+  Widget _buildLoginLink() {
     return Center(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Pas encore de compte ? ',
+            'Déjà un compte ? ',
             style: TextStyle(
               color: Colors.grey.shade600,
               fontSize: 16,
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RegisterPage()),
-              );
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text(
-              'S\'inscrire',
+              'Se connecter',
               style: TextStyle(
                 color: Color(0xFFf32733),
                 fontSize: 16,

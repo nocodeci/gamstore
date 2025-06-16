@@ -18,7 +18,7 @@ class Seat {
   factory Seat.fromFirestore(Map<String, dynamic> data, String id) {
     return Seat(
       id: id,
-      seatNumber: data['seatNumber'] ?? 0,           // ✅ Nom exact de votre DB
+      seatNumber: int.tryParse(data['seatNumber'].toString()) ?? 0,           // ✅ Nom exact de votre DB
       isReserved: data['isReserved'] ?? false,       // ✅ Nom exact de votre DB
       reservedBy: data['reservedBy'],                // ✅ Nom exact de votre DB
       reservedAt: data['reservedAt'] != null 
